@@ -226,7 +226,7 @@ class Comment(Base):
         name = 'anonymous'
         u = model.User.get(self.user_id)
         if u:
-            name = u.fullname
+            name = u.fullname or u.name
 
         # Hack
         if name == config.get('ckan.site_id', 'ckan_site_user') or not name:
@@ -235,7 +235,9 @@ class Comment(Base):
         d = {}
         d['id'] = self.id
         d['user_id'] = self.user_id
-        d['username'] = name
+        d['user_display_name'] = name
+        d['username'] = u.name
+        d['user_email_hash'] = u.email_hash
         d['subject'] = self.subject
         d['content'] = self.comment
         d['state'] = self.state

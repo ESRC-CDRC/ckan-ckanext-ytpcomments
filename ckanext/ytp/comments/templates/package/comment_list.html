@@ -2,18 +2,16 @@
 
 {% resource "comments_js/comments.js" %}
 
-{% macro comment_form(values={}, empty=False, hidden=True, prefix="", action="add") %}
-    <form id="{{ prefix + values.id }}" class="form {% if hidden %}hidden{% endif %} ytp-form" action="{{ pkg_id }}/comments/{% if values.id %}{{ values.id }}/{% endif %}{{ action }}" method="POST">
-        <div class="form-controls">
-            <input type="text" class="form-control" name="subject" {% if not empty %}value="{{ values.subject }}" {% endif %} placeholder="{{ _('Subject') }}"/>
-            {% set unescaped_content = values.content.split('<br/>') %}
-            <textarea name="comment" class="form-control input-block-level" rows="3" placeholder="{{ _('Comment') }}">{% if not empty %}{% for line in unescaped_content %}{{ line | striptags }}{{'\n'}}{% endfor %}{% endif %}</textarea>
-        </div>
-        <div class="form-actions">
-            <input type="submit" class="btn btn-primary" value="{{ _('Save') }}"/>
-            <input type="reset" class="btn" value="{{ _('Reset') }}"/>
-        </div>
-    </form>
+{% macro comment_form(values={}, empty=False, action="add") %}
+  <form class="form" action="{{ pkg_id }}/comments/{% if values.id %}{{ values.id }}/{% endif %}{{ action }}" method="POST">
+      <div class="form-controls">
+        <textarea name="comment" class="form-control input-block-level" rows="3" placeholder="{{ _('Comment') }}">{% if not empty %}{% for line in values.content.split('<br/>') %}{{ line | striptags }}{{'\n'}}{% endfor %}{% endif %}</textarea>
+      </div>
+      <div class="form-actions" style="padding-right: 30px">
+          <input type="submit" class="btn btn-primary btn-mini" value="{{ _('Save') }}"/>
+          <input type="reset" class="btn btn-mini" value="{{ _('Reset') }}"/>
+      </div>
+  </form>
 {% endmacro %}
 
 
@@ -22,70 +20,92 @@
 
 {% macro comment_thread(thread) %}
 
-    <div class="comment-wrapper">
-    {% for comment in thread.comments %}
-        <div class="comment">
-            <div class="submitted">
-              {% if comment.state == 'active' %}
-                <div class="btn-group">
-                    {% if h.check_access('package_update', {'id': pkg_id }) %}
-                      <a class="btn btn-mini" href="/dataset/{{ pkg_id }}/comments/{{ comment.id }}/delete"><i class="icon-trash"></i></a> 
-                    {% endif %}
-
-                    {% if userobj and comment.user_id == userobj.id %}
-                        <a class="btn btn-mini" onclick="ShowCommentForm('{{ comment.id }}', 'edit')"><i class="icon-pencil"></i></a>
-                    {% endif %}
-                    {% if userobj %}
-                        <a class="btn btn-mini" onclick="ShowCommentForm('{{ comment.id }}', 'reply')"><i class="icon-reply"></i></a>
-                    {% endif %}
-
-                </div>
-              {% endif %}
-            </div>
-            <div class="content">
-            {% if comment.state != 'deleted' %}
+      {% for comment in thread.comments %}
+        <div id="" class="media">
+          <a class="pull-left" href="/users/{{ comment.username }}" style="margin-right: 10px">
+            {{ h.gravatar((comment.user_email_hash if comment.user_email_hash else ''), size=48) }}
+          </a>
+          <div class="media-body">
+              <!-- comment cotent  -->
               <div id="content_{{ comment.id }}" class="ytp-content">
-                  <h3>{{ comment.subject }}</h3>
-                  <span>{{ h.render_datetime(comment.creation_date, "%H:%M - %d/%m/%Y") }} {{  h.linked_user(comment.user_id, 0, 10) }}</span>
-                  {% if comment.modified_date %}
-                      <br/><span>{{ h.render_datetime(comment.modified_date, "%d.%m.%Y %H:%M") }} {{ _('Modified') }} </span>
+                <p> 
+                  <a href="/users/{{ comment.username }}"><strong>{{ comment.user_display_name }}</strong></a> - {{ h.render_datetime(comment.creation_date, "%H:%M - %d/%m/%Y") }}
+                  {% if comment.state == 'active' %}
+                        {% if h.check_access('package_update', {'id': pkg_id }) %}
+                        <a href="/dataset/{{ pkg_id }}/comments/{{ comment.id }}/delete" style="text-decoration: none"><i class="icon-trash"></i></a> 
+                        {% endif %}
+
+                        {% if userobj and comment.user_id == userobj.id %}
+                          <a onclick="ShowCommentForm('{{ comment.id }}', 'edit')" href="#content_{{comment.id}}" style="text-decoration: none"><i class="icon-pencil"></i></a>
+                        {% endif %}
+                        {% if userobj %}
+                            <a onclick="ShowCommentForm('{{ comment.id }}', 'reply')" href="#content_{{comment.id}}" style="text-decoration: none"><i class="icon-reply"></i></a>
+                        {% endif %}
                   {% endif %}
-                {{ comment.content|safe }}
+                {% if comment.state != 'deleted' %}
+                  {% if comment.modified_date %}
+                    <br/><em>{{ h.render_datetime(comment.modified_date, "%H:%M - %d/%m/%Y") }} {{ _('Modified') }}</em>
+                  {% endif %}
+                {% else %}
+                  <br/><span style="color: #aaa"><em>({{ _('This comment was deleted.') }})</em></span>
+                {% endif %}
+                </p>
+                {% if comment.state != 'deleted' %}
+                  <p> {{ comment.content|safe }} </p>
+                {% endif %}
               </div>
-              {{ comment_form(comment, prefix='edit_', action='edit') }}
-              {{ comment_form(comment, empty=True, prefix='reply_', action='reply') }}
-            {% else %}
-                {{ _('This comment was deleted.') }}
-            {% endif %}
-            </div>
+              <!-- end of comment content -->
+              <!-- edit form -->
+              <div id="edit_{{ comment.id }}" class="ytp-form hidden">
+                {{ comment_form(comment, empty=False, action='edit') }}
+              </div>
+              <!-- end of edit form -->
+              <!-- reply form -->
+              <div id="reply_{{ comment.id }}"class="media hidden ytp-form">
+                <a class="pull-left" href="/users/c.user_obj.username" style="margin-right: 10px">
+                    {{ h.gravatar((userobj.email_hash if userobj.email_hash else ''), size=48) }}
+                </a>
+                <div class="media-body">
+                  {{ comment_form(comment, empty=True, action='reply') }}
+                </div>
+              </div>
+              <!-- end of reply form -->
+              {% if comment.comments | length != 0 %}
+                  {{ comment_thread(comment) }}
+              {% endif %}
+          </div>
         </div>
-            {% if comment.comments | length != 0 %}
-                {{ comment_thread(comment) }}
-            {% endif %}
-    {% endfor %}
-    </div>
+      {% endfor %}
 
 {% endmacro %}
 
 <section id="comment">
   <h3 id="comments">{{ _('Comments') }}</h3>
-  {% if userobj %}
-    <form id="new_comment" class="form ytp-form" action="{{ pkg_id }}/comments/add" method="POST">
-        <div class="form-controls">
-            <input type="text" class="form-control" name="subject" placeholder="{{ _('Subject') }}"/>
-            <textarea name="comment" class="form-control input-block-level" rows="3" placeholder="{{ _('Comment') }}"></textarea>
-        </div>
-        <div class="form-actions">
-            <input type="submit" class="btn btn-primary" value="{{ _('Save') }}"/>
-            <input type="reset" class="btn" value="{{ _('Clear') }}"/>
-        </div>
-    </form>
-  {% else %}
-    {{ _('Login to comment.') }}
-  {% endif %}
 
   <div class="comment-container">
       {{ comment_thread(thread) }}
   </div>
+
+  {% if userobj %}
+    <div class="media ytp-form">
+      <a class="pull-left" href="/users/c.user_obj.username" style="margin-right: 10px">
+        {{ h.gravatar((userobj.email_hash if userobj.email_hash else ''), size=48) }}
+      </a>
+      <div class="media-body">
+        <form class="form" action="{{ pkg_id }}/comments/add" method="POST">
+            <div class="form-controls">
+                <!-- <input type="text" class="form-control" name="subject" placeholder="{{ _('Subject') }}"/> -->
+                <textarea name="comment" class="form-control input-block-level" rows="3" placeholder="Please leave your comment here ..."></textarea>
+            </div>
+            <div class="form-actions" style="padding-right: 30px">
+                <input type="submit" class="btn btn-primary btn-mini" value="{{ _('Save') }}"/>
+                <input type="reset" class="btn btn-mini" value="{{ _('Clear') }}"/>
+            </div>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    {{ _('Login to comment.') }}
+  {% endif %}
 
 </section>
