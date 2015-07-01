@@ -1,3 +1,4 @@
+/* global $ */
 function ShowCommentForm(id, type){
   // reset the status
   $(".ytp-form").addClass('hidden');

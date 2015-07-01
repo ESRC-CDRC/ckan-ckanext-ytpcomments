@@ -29,7 +29,9 @@
               <!-- comment cotent  -->
               <div id="content_{{ comment.id }}" class="ytp-content">
                 <p> 
-                  <a href="/users/{{ comment.username }}"><strong>{{ comment.user_display_name }}</strong></a> - {{ h.render_datetime(comment.creation_date, "%H:%M - %d/%m/%Y") }}
+                  <a href="/users/{{ comment.username }}"><strong>{{ comment.user_display_name }}</strong></a>
+                  <span>- {{ h.render_datetime(comment.creation_date, "%H:%M - %d/%m/%Y") }}</span>
+                  <span style="margin-left: 10px">
                   {% if comment.state == 'active' %}
                         {% if h.check_access('package_update', {'id': pkg_id }) %}
                         <a href="/dataset/{{ pkg_id }}/comments/{{ comment.id }}/delete" style="text-decoration: none"><i class="icon-trash"></i></a> 
@@ -42,6 +44,7 @@
                             <a onclick="ShowCommentForm('{{ comment.id }}', 'reply')" href="#content_{{comment.id}}" style="text-decoration: none"><i class="icon-reply"></i></a>
                         {% endif %}
                   {% endif %}
+                  </span>
                 {% if comment.state != 'deleted' %}
                   {% if comment.modified_date %}
                     <br/><em>{{ h.render_datetime(comment.modified_date, "%H:%M - %d/%m/%Y") }} {{ _('Modified') }}</em>
@@ -60,6 +63,9 @@
                 {{ comment_form(comment, empty=False, action='edit') }}
               </div>
               <!-- end of edit form -->
+              {% if comment.comments | length != 0 %}
+                  {{ comment_thread(comment) }}
+              {% endif %}
               <!-- reply form -->
               <div id="reply_{{ comment.id }}"class="media hidden ytp-form">
                 <a class="pull-left" href="/users/c.user_obj.username" style="margin-right: 10px">
@@ -70,9 +76,6 @@
                 </div>
               </div>
               <!-- end of reply form -->
-              {% if comment.comments | length != 0 %}
-                  {{ comment_thread(comment) }}
-              {% endif %}
           </div>
         </div>
       {% endfor %}
