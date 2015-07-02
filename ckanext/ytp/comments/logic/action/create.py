@@ -2,15 +2,12 @@ import datetime
 import ckanext.ytp.comments.model as comment_model
 import ckanext.ytp.comments.util as util
 from ckan import logic
-from pprint import pprint
 import logging
 
 log = logging.getLogger(__name__)
 
 
 def comment_create(context, data_dict):
-    pprint(data_dict)
-    pprint(context)
     model = context['model']
     user = context['user']
 
